@@ -55,8 +55,10 @@ from torch.distributed import (
 from torch.distributed.distributed_c10d import (
     AllgatherOptions,
     AllreduceOptions,
+    AllToAllOptions,
     BroadcastOptions,
     ReduceOp,
+    ReduceScatterOptions,
     Work,
 )
 from torch.futures import Future
@@ -124,12 +126,6 @@ class ProcessGroup(BaseProcessGroup):
         raise NotImplementedError("not implemented")
 
     # pyre-fixme[14]: inconsistent override
-    def allreduce(
-        self, tensors: List[torch.Tensor], opts: Union[AllreduceOptions, ReduceOp]
-    ) -> Work:
-        raise NotImplementedError("not implemented")
-
-    # pyre-fixme[14]: inconsistent override
     def allgather(
         self,
         output_tensors: List[List[torch.Tensor]],
@@ -141,6 +137,46 @@ class ProcessGroup(BaseProcessGroup):
 
         See torch.distributed.all_gather for more details.
         """
+        raise NotImplementedError("not implemented")
+
+    # pyre-fixme[14]: inconsistent override
+    def allgather_into_tensor_coalesced(
+        self,
+        output_tensors: List[torch.Tensor],
+        input_tensors: List[torch.Tensor],
+        opts: AllgatherOptions,
+    ) -> Work:
+        """
+        Performs an all_gather operation into a single tensor.
+
+        See torch.distributed.all_gather_into_tensor for more details.
+        """
+        raise NotImplementedError("not implemented")
+
+    # pyre-fixme[14]: inconsistent override
+    def allreduce(
+        self, tensors: List[torch.Tensor], opts: Union[AllreduceOptions, ReduceOp]
+    ) -> Work:
+        raise NotImplementedError("not implemented")
+
+    def allreduce_coalesced(
+        self, tensors: List[torch.Tensor], opts: Union[AllreduceOptions, ReduceOp]
+    ) -> Work:
+        raise NotImplementedError("not implemented")
+
+    # pyre-fixme[14]: inconsistent override
+    def alltoall_base(
+        self,
+        output_buffer: torch.Tensor,
+        input_buffer: torch.Tensor,
+        output_split_sizes: List[int],
+        input_split_sizes: List[int],
+        options: AllToAllOptions,
+    ) -> Work:
+        raise NotImplementedError("not implemented")
+
+    # pyre-fixme[14]: inconsistent override
+    def barrier(self) -> Work:
         raise NotImplementedError("not implemented")
 
     # pyre-fixme[14]: inconsistent override
@@ -184,6 +220,22 @@ class ProcessGroup(BaseProcessGroup):
         dist.Backend.register_backend(group_name, create_pg, devices=devices)
 
         return group_name
+
+    def receive(self, tensors: List[torch.Tensor], rank: int, tag: int) -> Work:
+        raise NotImplementedError("not implemented")
+
+    # pyre-fixme[14]: inconsistent override
+    def reduce_scatter_tensor_coalesced(
+        self,
+        output_tensors: List[torch.Tensor],
+        input_tensors: List[torch.Tensor],
+        opts: ReduceScatterOptions,
+    ) -> Work:
+        raise NotImplementedError("not implemented")
+
+    # pyre-fixme[14]: inconsistent override
+    def send(self, tensors: List[torch.Tensor], dst_rank: int, tag: int) -> Work:
+        raise NotImplementedError("not implemented")
 
     def register(self, name: str) -> "ProcessGroup":
         """
