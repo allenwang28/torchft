@@ -545,7 +545,7 @@ class ProcessGroupDummy(ProcessGroup):
         return res
 
     def barrier(self) -> Work:
-        pass
+        return _DummyWork(None)
 
     def broadcast(self, tensor_list: List[torch.Tensor], opts: object) -> Work:
         res = _DummyWork(tensor_list)
@@ -553,7 +553,7 @@ class ProcessGroupDummy(ProcessGroup):
         return res
 
     def receive(self, tensors: List[torch.Tensor], rank: int, tag: int) -> Work:
-        pass
+        return _DummyWork(None)
 
     def reduce_scatter_tensor_coalesced(
         self,
@@ -569,7 +569,7 @@ class ProcessGroupDummy(ProcessGroup):
         return res
 
     def send(self, tensors: List[torch.Tensor], dst_rank: int, tag: int) -> Work:
-        pass
+        return _DummyWork(None)
 
     def size(self) -> int:
         return self._world
