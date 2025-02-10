@@ -366,7 +366,9 @@ class ProcessGroupWrapper(ProcessGroup):
         input_tensors: List[torch.Tensor],
         opts: AllgatherOptions,
     ) -> Work:
-        return self.parent.allgather_into_tensor_coalesced(output_tensors, input_tensors, opts)
+        return self.parent.allgather_into_tensor_coalesced(
+            output_tensors, input_tensors, opts
+        )
 
     def allreduce(self, tensors: List[torch.Tensor], opts: object) -> Work:
         return self.parent.allreduce(tensors, opts)
@@ -384,7 +386,9 @@ class ProcessGroupWrapper(ProcessGroup):
         input_split_sizes: List[int],
         options: AllToAllOptions,
     ) -> Work:
-        return self.parent.alltoall_base(output_buffer, input_buffer, output_split_sizes, input_split_sizes, options)
+        return self.parent.alltoall_base(
+            output_buffer, input_buffer, output_split_sizes, input_split_sizes, options
+        )
 
     def barrier(self) -> Work:
         return self.parent.barrier()
@@ -401,7 +405,9 @@ class ProcessGroupWrapper(ProcessGroup):
         input_tensors: List[torch.Tensor],
         opts: ReduceScatterOptions,
     ) -> Work:
-        return self.parent.reduce_scatter_tensor_coalesced(output_tensors, input_tensors, opts)
+        return self.parent.reduce_scatter_tensor_coalesced(
+            output_tensors, input_tensors, opts
+        )
 
     def send(self, tensors: List[torch.Tensor], dst_rank: int, tag: int) -> Work:
         return self.parent.send(tensors, dst_rank, tag)
@@ -1118,19 +1124,6 @@ class ProcessGroupBaby(ProcessGroup):
         if not p.is_alive():
             raise RuntimeError(f"child process {p.pid=} is dead {p.exitcode=}")
 
-    def allreduce(
-        self,
-        tensors: List[torch.Tensor],
-        opts: Union[dist.AllreduceOptions, dist.ReduceOp],
-    ) -> Work:
-        assert isinstance(tensors, list), "input must be list"
-
-        for tensor in tensors:
-            if not tensor.is_shared():
-                tensor.share_memory_()
-
-        return self._run_func("allreduce", tensors, opts)
-
     def allgather(
         self,
         output_tensors: List[List[torch.Tensor]],
@@ -1151,6 +1144,81 @@ class ProcessGroupBaby(ProcessGroup):
 
         return self._run_func("allgather", output_tensors, input_tensor, opts)
 
+    def allgather_into_tensor_coalesced(
+        self,
+        output_tensors: List[torch.Tensor],
+        input_tensors: List[torch.Tensor],
+        opts: AllgatherOptions,
+    ) -> Work:
+        assert isinstance(output_tensors, list), "input must be list"
+        assert isinstance(input_tensors, list), "input must be list"
+
+        for tensor in output_tensors:
+            if not tensor.is_shared():
+                tensor.share_memory_()
+
+        for tensor in input_tensors:
+            if not tensor.is_shared():
+                tensor.share_memory_()
+
+        return self._run_func(
+            "allgather_into_tensor_coalesced", output_tensors, input_tensors, opts
+        )
+
+    def allreduce(
+        self,
+        tensors: List[torch.Tensor],
+        opts: Union[dist.AllreduceOptions, dist.ReduceOp],
+    ) -> Work:
+        assert isinstance(tensors, list), "input must be list"
+
+        for tensor in tensors:
+            if not tensor.is_shared():
+                tensor.share_memory_()
+
+        return self._run_func("allreduce", tensors, opts)
+
+    def allreduce_coalesced(
+        self,
+        tensors: List[torch.Tensor],
+        opts: Union[dist.AllreduceOptions, dist.ReduceOp],
+    ) -> Work:
+        assert isinstance(tensors, list), "input must be list"
+
+        for tensor in tensors:
+            if not tensor.is_shared():
+                tensor.share_memory_()
+
+        return self._run_func("allreduce_coalesced", tensors, opts)
+
+    def alltoall_base(
+        self,
+        output_tensors: List[torch.Tensor],
+        input_tensors: List[torch.Tensor],
+        output_split_sizes: List[int],
+        input_split_sizes: List[int],
+    ) -> Work:
+        assert isinstance(output_tensors, list), "input must be list"
+        assert isinstance(input_tensors, list), "input must be list"
+
+        for tensor in output_tensors:
+            if not tensor.is_shared():
+                tensor.share_memory_()
+
+        for tensor in input_tensors:
+            if not tensor.is_shared():
+                tensor.share_memory_()
+        return self._run_func(
+            "alltoall_base",
+            output_tensors,
+            input_tensors,
+            output_split_sizes,
+            input_split_sizes,
+        )
+
+    def barrier(self, opts: BarrierOptions) -> Work:
+        return self._run_func("barrier", opts)
+
     def broadcast(
         self,
         tensor_list: List[torch.Tensor],
@@ -1166,6 +1234,45 @@ class ProcessGroupBaby(ProcessGroup):
 
     def size(self) -> int:
         return self._world_size
+
+    def receive(self, tensors: List[torch.Tensor], rank: int, tag: int) -> Work:
+        assert isinstance(tensors, list), "input must be list"
+
+        for tensor in tensors:
+            if not tensor.is_shared():
+                tensor.share_memory_()
+
+        return self._run_func("receive", tensors, rank, tag)
+
+    def reduce_scatter_tensor_coalesced(
+        self,
+        output_tensors: List[torch.Tensor],
+        input_tensors: List[torch.Tensor],
+        opts: ReduceScatterOptions,
+    ) -> Work:
+        assert isinstance(output_tensors, list), "input must be list"
+        assert isinstance(input_tensors, list), "input must be list"
+
+        for tensor in output_tensors:
+            if not tensor.is_shared():
+                tensor.share_memory_()
+
+        for tensor in input_tensors:
+            if not tensor.is_shared():
+                tensor.share_memory_()
+
+        return self._run_func(
+            "reduce_scatter_tensor_coalesced", output_tensors, input_tensors, opts
+        )
+
+    def send(self, tensor_list: List[torch.Tensor], rank: int, tag: int) -> Work:
+        assert isinstance(tensor_list, list), "input must be list"
+
+        for tensor in tensor_list:
+            if not tensor.is_shared():
+                tensor.share_memory_()
+
+        return self._run_func("send", tensor_list, rank, tag)
 
     def num_active_work(self) -> int:
         assert self._tx is not None
